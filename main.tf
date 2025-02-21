@@ -7,7 +7,6 @@ terraform {
   }
 }
 
-# Configure the AWS Provider
 provider "aws" {
   region  = "eu-north-1"
   profile = "default"
@@ -40,36 +39,55 @@ resource "aws_sqs_queue" "sh_queue" {
   })
 }
 
-variable "resource_group_name" {
-  description = "Default resource group name that the network will be created in."
-  type        = list(string)
-  default     = ["kraken-q-p1", "kraken-q-p2"]
 
+resource "aws_sqs_queue_policy" "sh_queue_policy" {
+  count     = length(var.resource_group_name)
+  queue_url = aws_sqs_queue.sh_queue[count.index].url
+  policy = jsonencode({
+    Id = "QueuePolicy",
+    Statement = [
+      {
+        Sid    = "kraken-sqs-sid",
+        Effect = "Allow",
+        Principal = {
+          AWS = "*"
+        },
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:SendMessage",
+        ],
+        Resource = aws_sqs_queue.sh_queue[count.index].arn
+      },
+    ]
+  })
 }
 
 
+resource "aws_sqs_queue_policy" "sh_queue_dl_policy" {
+  count     = length(var.resource_group_name)
+  queue_url = aws_sqs_queue.sh_dl_queue[count.index].url
+  policy = jsonencode({
+    Id = "DLQueuePolicy",
+    Statement = [
+      {
+        Sid    = "kraken-sqs-dl-sid",
+        Effect = "Allow",
+        Principal = {
+          AWS = "*"
+        },
+        Action = [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage"
+        ],
+        Resource = aws_sqs_queue.sh_dl_queue[count.index].arn
+      },
+    ]
+  })
+}
 
-# data "aws_iam_policy_document" "sh_sqs_policy" {
-#   statement {
-#     sid    = "shsqsstatement"
-#     effect = "Allow"
-
-#     principals {
-#       type        = "AWS"
-#       identifiers = ["*"]
-#     }
-
-#     actions = [
-#       "sqs:SendMessage",
-#       "sqs:ReceiveMessage"
-#     ]
-#     resources = [
-#       aws_sqs_queue.sh_queue.arn
-#     ]
-#   }
-# }
-
-# resource "aws_sqs_queue_policy" "sh_sqs_policy" {
-#   queue_url = aws_sqs_queue.sh_queue.id
-#   policy    = data.aws_iam_policy_document.sh_sqs_policy.json
-# }
+variable "resource_group_name" {
+  description = "Queue Names meant to be created by default TD: Read from a data file"
+  type        = list(string)
+  default     = ["kraken-q-p1", "kraken-q-p2"]
+}

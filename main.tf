@@ -9,39 +9,45 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "eu-north-1"
-  #   shared_config_files      = ["/Path/to/.aws/config"]
-  #   shared_credentials_files = ["/Path/to/.aws/credentials"]
+  region  = "eu-north-1"
   profile = "default"
 }
 
-# resource "aws_sqs_queue" "sh_queue" {
-#   name                       = "sh-example-queue"
-#   delay_seconds              = 10
-#   visibility_timeout_seconds = 30
-#   max_message_size           = 2048
-#   message_retention_seconds  = 86400
-#   receive_wait_time_seconds  = 2
-#   sqs_managed_sse_enabled    = true
-# }
-
-resource "aws_sqs_queue" "sh_queue" {
-  name                       = each.value
+resource "aws_sqs_queue" "sh_dl_queue" {
+  name                       = "${var.resource_group_name[count.index]}-dlq"
+  count                      = length(var.resource_group_name)
   delay_seconds              = 10
   visibility_timeout_seconds = 30
   max_message_size           = 2048
   message_retention_seconds  = 86400
   receive_wait_time_seconds  = 2
   sqs_managed_sse_enabled    = true
-  for_each                   = toset(var.resource_group_name) // convert list to set and iterate over it
+}
+
+resource "aws_sqs_queue" "sh_queue" {
+  name                       = var.resource_group_name[count.index]
+  count                      = length(var.resource_group_name)
+  delay_seconds              = 10
+  visibility_timeout_seconds = 30
+  max_message_size           = 2048
+  message_retention_seconds  = 86400
+  receive_wait_time_seconds  = 2
+  sqs_managed_sse_enabled    = true
+  redrive_policy = jsonencode({
+    # deadLetterTargetArn = "${var.resource_group_name[count.index]}-dlq"
+    deadLetterTargetArn = aws_sqs_queue.sh_dl_queue[count.index].arn
+    maxReceiveCount     = 4
+  })
 }
 
 variable "resource_group_name" {
   description = "Default resource group name that the network will be created in."
   type        = list(string)
-  default     = ["asd-rg", "asd2-rg"]
+  default     = ["kraken-q-p1", "kraken-q-p2"]
 
 }
+
+
 
 # data "aws_iam_policy_document" "sh_sqs_policy" {
 #   statement {

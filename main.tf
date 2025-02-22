@@ -40,54 +40,43 @@ resource "aws_sqs_queue" "sh_queue" {
 }
 
 
-resource "aws_sqs_queue_policy" "sh_queue_policy" {
-  count     = length(var.resource_group_name)
-  queue_url = aws_sqs_queue.sh_queue[count.index].url
-  policy = jsonencode({
-    Id = "QueuePolicy",
-    Statement = [
-      {
-        Sid    = "kraken-sqs-sid",
-        Effect = "Allow",
-        Principal = {
-          AWS = "*"
-        },
-        Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:SendMessage",
-        ],
-        Resource = aws_sqs_queue.sh_queue[count.index].arn
-      },
-    ]
-  })
+
+
+locals {
+  all_queue_arns  = flatten([aws_sqs_queue.sh_queue[*].arn, aws_sqs_queue.sh_dl_queue[*].arn])
+  main_queue_arns = flatten([aws_sqs_queue.sh_queue[*].arn])
+  dl_queue_arns   = flatten([aws_sqs_queue.sh_dl_queue[*].arn])
 }
 
 
-resource "aws_sqs_queue_policy" "sh_queue_dl_policy" {
-  count     = length(var.resource_group_name)
-  queue_url = aws_sqs_queue.sh_dl_queue[count.index].url
-  policy = jsonencode({
-    Id = "DLQueuePolicy",
-    Statement = [
-      {
-        Sid    = "kraken-sqs-dl-sid",
-        Effect = "Allow",
-        Principal = {
-          AWS = "*"
-        },
-        Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage"
-        ],
-        Resource = aws_sqs_queue.sh_dl_queue[count.index].arn
-      },
+data "aws_iam_policy_document" "consume_policy_document" {
+  statement {
+    sid    = "AllowSQSReceiveAndDelete"
+    effect = "Allow"
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
     ]
-  })
+    resources = local.all_queue_arns
+  }
 }
+
+resource "aws_iam_policy" "consume_policy" {
+  name   = "ConsumePolicy"
+  policy = data.aws_iam_policy_document.consume_policy_document.json
+}
+
+
+
+
 
 variable "resource_group_name" {
   description = "Queue Names meant to be created by default TD: Read from a data file"
   type        = list(string)
-  default     = ["kraken-q-p1", "kraken-q-p2"]
+  default     = ["kraken-q-priority-1", "kraken-q-priority-2"]
+}
+
+output "queue_arns" {
+  value       = [aws_sqs_queue.sh_queue[*].arn, aws_sqs_queue.sh_dl_queue[*].arn]
+  description = "ARNs of the created SQS queues"
 }

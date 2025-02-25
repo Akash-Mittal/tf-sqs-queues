@@ -4,21 +4,9 @@ provider "aws" {
   profile = var.aws_profile
 }
 
-
-resource "aws_sqs_queue" "sh_dl_queue" {
-  name                       = "${var.resource_group_name[count.index]}-dlq"
-  count                      = length(var.resource_group_name)
-  delay_seconds              = var.dlq_delay_seconds
-  visibility_timeout_seconds = var.dlq_visibility_timeout_seconds
-  max_message_size           = var.dlq_max_message_size
-  message_retention_seconds  = var.dlq_message_retention_seconds
-  receive_wait_time_seconds  = var.dlq_receive_wait_time_seconds
-  sqs_managed_sse_enabled    = var.dlq_sqs_managed_sse_enabled
-}
-
 resource "aws_sqs_queue" "sh_queue" {
-  name                       = var.resource_group_name[count.index]
-  count                      = length(var.resource_group_name)
+  name                       = var.queue_names[count.index]
+  count                      = length(var.queue_names)
   delay_seconds              = var.dlq_delay_seconds
   visibility_timeout_seconds = var.dlq_visibility_timeout_seconds
   max_message_size           = var.dlq_max_message_size
@@ -26,11 +14,23 @@ resource "aws_sqs_queue" "sh_queue" {
   receive_wait_time_seconds  = var.dlq_receive_wait_time_seconds
   sqs_managed_sse_enabled    = var.dlq_sqs_managed_sse_enabled
   redrive_policy = jsonencode({
-    # deadLetterTargetArn = "${var.resource_group_name[count.index]}-dlq"
+    # deadLetterTargetArn = "${var.queue_names[count.index]}-dlq"
     deadLetterTargetArn = aws_sqs_queue.sh_dl_queue[count.index].arn
     maxReceiveCount     = 4
   })
 }
+
+resource "aws_sqs_queue" "sh_dl_queue" {
+  name                       = "${var.queue_names[count.index]}-dlq"
+  count                      = length(var.queue_names)
+  delay_seconds              = var.dlq_delay_seconds
+  visibility_timeout_seconds = var.dlq_visibility_timeout_seconds
+  max_message_size           = var.dlq_max_message_size
+  message_retention_seconds  = var.dlq_message_retention_seconds
+  receive_wait_time_seconds  = var.dlq_receive_wait_time_seconds
+  sqs_managed_sse_enabled    = var.dlq_sqs_managed_sse_enabled
+}
+
 
 
 ########################### Consume Policy #############################

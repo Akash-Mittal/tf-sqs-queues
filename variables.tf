@@ -9,7 +9,7 @@ variable "aws_profile" {
   description = "AWS profile"
 }
 
-variable "resource_group_name" {
+variable "queue_names" {
   description = "Queue Names meant to be created by default TD: Read from a data file"
   type        = list(string)
   default     = ["kraken-q-priority-1", "kraken-q-priority-10"]

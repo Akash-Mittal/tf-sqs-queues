@@ -1,7 +1,31 @@
-```markdown
+aws -```markdown
 # Terraform SQS Queue Module
 
 This Terraform module creates SQS queues and their corresponding dead-letter queues (DLQs), along with IAM policies for consuming and sending messages.
+
+# Running the Terraform SQS Queue Module
+
+This section provides instructions on how to run the Terraform SQS Queue Module using the provided `run.bat` file.
+
+## Prerequisites
+
+Before running the module, ensure you have the following:
+
+1.  **Terraform installed:**  Make sure you have Terraform installed on your system. 
+2.  **AWS Credentials configured:** You must configure your AWS credentials.
+3   **Terraform Version:** This module was tested with Terraform version v1.10.5.
+4   **AWS Provider Version:** This module was tested with AWS provider version v4.19.0.
+
+## Running the Module
+
+  **Execute the `run.sh` 
+
+    ```bash
+    run.sh
+    ```
+
+## Customization
+
 
 ## Module Input
 
@@ -28,42 +52,13 @@ The module performs the following actions:
 *   `queue_arns`: A list of ARNs for all created queues (main and DLQ).
 *   `consume_policy_arn`: The ARN of the IAM policy allowing `sqs:ReceiveMessage` and `sqs:DeleteMessage`.
 *   `write_policy_arn`: The ARN of the IAM policy allowing `sqs:SendMessage`.
+TBD
 *   `consume_role_arn` (Extra Credit): The ARN of the IAM role associated with the consume policy (if `create_roles` is true).
 *   `write_role_arn` (Extra Credit): The ARN of the IAM role associated with the write policy (if `create_roles` is true).
 
-## Usage
-
-```terraform
-module "sqs_module" {
-  source = "path/to/your/module"  # Replace with the path to your module
-
-  queue_names = ["priority-10", "priority-100", "important-queue"] #Example
-
-  # Optional variables with defaults
-  # ... (other variables can be set here)
-
 }
 
-output "queue_arns" {
- value = module.sqs_module.queue_arns
-}
 
-output "consume_policy_arn" {
- value = module.sqs_module.consume_policy_arn
-}
-
-output "write_policy_arn" {
- value = module.sqs_module.write_policy_arn
-}
-
-output "consume_role_arn" {
- value = module.sqs_module.consume_role_arn
-}
-
-output "write_role_arn" {
- value = module.sqs_module.write_role_arn
-}
-```
 
 ## Example
 
@@ -76,15 +71,8 @@ Given `queue_names = ["priority-10", "priority-100"]`, the module will create:
 
 And the `consume_policy` will grant receive and delete permissions on all four queues, while the `write_policy` will grant send permissions only on `priority-10` and `priority-100`.
 
-## Terraform Version
 
-This module is compatible with Terraform 1.0.0 and later.
-
-## AWS Provider Version
-
-This module requires the AWS provider version 3.48.0 or later.
-
-## Extra Credit: IAM Roles
+## Extra Credit: IAM Roles - TBD
 
 The module includes a boolean variable `create_roles` (default: `false`).  If set to `true`, the module will also create two IAM roles:
 
@@ -105,12 +93,5 @@ module "sqs_module" {
 
 **Important:** Setting `create_roles = true` will create roles that can be assumed by *anyone* in your AWS account.  In a production environment, you should **restrict** the `assume_role_policy` to only the specific entities (users, roles, services) that should be allowed to assume these roles.  You can do this by modifying the `assume_role_policy` within the module's Terraform configuration.
 
-## Author
-
-Akash Mittal
-
-## License
-
-Apache 2.0
 
 ```

@@ -1,3 +1,14 @@
+
+variable "aws_region" {
+  type        = string
+  description = "AWS region"
+}
+
+variable "aws_profile" {
+  type        = string
+  description = "AWS profile"
+}
+
 variable "resource_group_name" {
   description = "Queue Names meant to be created by default TD: Read from a data file"
   type        = list(string)

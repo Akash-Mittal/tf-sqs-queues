@@ -1,8 +1,9 @@
 
 provider "aws" {
-  region  = "eu-north-1"
-  profile = "default"
+  region  = var.aws_region
+  profile = var.aws_profile
 }
+
 
 resource "aws_sqs_queue" "sh_dl_queue" {
   name                       = "${var.resource_group_name[count.index]}-dlq"
@@ -32,7 +33,7 @@ resource "aws_sqs_queue" "sh_queue" {
 }
 
 
-########################### Policy #############################
+########################### Consume Policy #############################
 data "aws_iam_policy_document" "consume_policy_document" {
   statement {
     sid    = "AllowSQSReceiveAndDelete"
@@ -70,4 +71,44 @@ resource "aws_iam_role" "sqs_consumer_role" {
 resource "aws_iam_role_policy_attachment" "sqs_consumer_policy_attachment" {
   role       = aws_iam_role.sqs_consumer_role.name
   policy_arn = aws_iam_policy.consume_policy.arn
+}
+
+
+########################### Write Policy #############################
+data "aws_iam_policy_document" "write_policy_document" {
+  statement {
+    sid    = "AllowSendMessage"
+    effect = "Allow"
+    actions = [
+      "sqs:SendMessage",
+    ]
+    resources = local.main_queue_arns
+  }
+}
+
+
+resource "aws_iam_policy" "write_policy" {
+  name   = "WritePolicy"
+  policy = data.aws_iam_policy_document.write_policy_document.json
+}
+
+
+resource "aws_iam_role" "sqs_write_role" {
+  name = "sqs_write_role"
+  assume_role_policy = jsonencode({
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "sqs_write_policy_attachment" {
+  role       = aws_iam_role.sqs_write_role.name
+  policy_arn = aws_iam_policy.write_policy.arn
 }
